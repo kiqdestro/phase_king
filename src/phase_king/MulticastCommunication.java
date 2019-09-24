@@ -7,7 +7,7 @@ public class MulticastCommunication {
 	
 	int socket;
 	String groupAddress;
-//	public boolean processesData[];
+	public boolean processesData[];
 	
 	MulticastCommunication(String group, int socket){
 		this.socket = socket;
