@@ -6,5 +6,9 @@ public class PhaseKing {
 		// TODO Auto-generated method stub
 
 	}
+	
+	public void setData(boolean processesData[]) {
+		
+	}
 
 }

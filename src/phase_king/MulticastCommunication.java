@@ -2,12 +2,13 @@ package phase_king;
 
 import java.io.*;
 import java.net.*;
+import java.util.Arrays;
 
 public class MulticastCommunication {
 	
 	int socket;
 	String groupAddress;
-	public boolean processesData[];
+	public Object[] processesData = null;
 	
 	MulticastCommunication(String group, int socket){
 		this.socket = socket;
@@ -48,6 +49,9 @@ public class MulticastCommunication {
 						byte[] buffer = new byte[500];
 						DatagramPacket in = new DatagramPacket (buffer, buffer.length);
 						s.receive(in);
+						// the infos are defined by [data, position]
+						String[] info = new String(in.getData()).split(",");
+						
 						System.out.println("Received: " + new String(in.getData()));
 					}
 					
@@ -60,5 +64,9 @@ public class MulticastCommunication {
 				flag = false;
 			}
 		};
+	}
+	
+	public void setData(boolean data, int pos) {
+		this.processesData[pos] = data;
 	}
 }
