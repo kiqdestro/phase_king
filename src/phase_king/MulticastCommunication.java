@@ -15,12 +15,13 @@ public class MulticastCommunication {
 		this.groupAddress = group;
 	}
 	
-	public void talk(String message) throws IOException, SocketException {
+	public void talk(boolean data, int pos) throws IOException, SocketException {	
 		
 		InetAddress group = InetAddress.getByName(this.groupAddress);
 		MulticastSocket s = new MulticastSocket(this.socket);
 		s.joinGroup(group);
-		byte [] m = message.getBytes();
+		String messageS = String.valueOf(data) + "," + String.valueOf(pos);
+		byte [] m = messageS.getBytes();
 		DatagramPacket messageOut = new DatagramPacket(m, m.length, group, this.socket);
 		s.send(messageOut);
 		s.leaveGroup(group);
@@ -50,8 +51,8 @@ public class MulticastCommunication {
 						DatagramPacket in = new DatagramPacket (buffer, buffer.length);
 						s.receive(in);
 						// the infos are defined by [data, position]
-						String[] info = new String(in.getData()).split(",");
-						
+						String[] info = new String(in.getData()).split(",", 0);
+						setData(Boolean.valueOf(info[0]), Integer.parseInt(info[1]));						
 						System.out.println("Received: " + new String(in.getData()));
 					}
 					
