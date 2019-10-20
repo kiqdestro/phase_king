@@ -2,26 +2,43 @@ package phase_king;
 
 import java.io.*;
 import java.net.*;
-import java.util.Arrays;
+import java.util.*;
+import org.json.*;
 
 public class MulticastCommunication {
 	
 	int socket;
 	String groupAddress;
-	public Object[] processesData = null;
+	public JSONObject processesData = new JSONObject();
+	
+	public boolean flag = true;
 	
 	MulticastCommunication(String group, int socket){
 		this.socket = socket;
 		this.groupAddress = group;
 	}
 	
-	public void talk(boolean data, int pos) throws IOException, SocketException {	
+	public void talk(Integer pos, Boolean data, Integer valuePK) throws IOException, SocketException { // null if not in use
 		
+		JSONArray info = new JSONArray();
 		InetAddress group = InetAddress.getByName(this.groupAddress);
 		MulticastSocket s = new MulticastSocket(this.socket);
 		s.joinGroup(group);
-		String messageS = String.valueOf(data) + "," + String.valueOf(pos);
+		
+		info.put(pos);
+		
+		if(data != null) {
+			info.put(1, data);
+		}
+		
+		if(valuePK != null) {
+			info.put(2, valuePK);
+		}
+		
+		String messageS = info.toString();
+		
 		byte [] m = messageS.getBytes();
+	    
 		DatagramPacket messageOut = new DatagramPacket(m, m.length, group, this.socket);
 		s.send(messageOut);
 		s.leaveGroup(group);
@@ -31,15 +48,14 @@ public class MulticastCommunication {
 	
 	public void listen() throws IOException, SocketException {
 		
+		String groupAddress = this.groupAddress;
+		int socket = this.socket;
+		
 		Thread thread = new Thread() {
-			private boolean flag = true;
-			String groupAddress = this.groupAddress;
-			int socket = this.socket;
 			
 			public void run() {
 				
 				MulticastSocket s = null;
-				boolean flag = true;
 				
 				try {
 					InetAddress group = InetAddress.getByName(groupAddress);
@@ -47,27 +63,49 @@ public class MulticastCommunication {
 					s.joinGroup(group);
 					
 					while (flag) {
-						byte[] buffer = new byte[500];
+						byte[] buffer = new byte[1000];
 						DatagramPacket in = new DatagramPacket (buffer, buffer.length);
 						s.receive(in);
-						// the infos are defined by [data, position]
-						String[] info = new String(in.getData()).split(",", 0);
-						setData(Boolean.valueOf(info[0]), Integer.parseInt(info[1]));						
-						System.out.println("Received: " + new String(in.getData()));
+						JSONArray info = new JSONArray(new String(in.getData()));
+						
+						setData(info);
 					}
 					
 				} catch (SocketException e){System.out.println("Socket: " + e.getMessage());
 				} catch (IOException e){System.out.println("IO: " + e.getMessage());
 				} finally {if (s != null) s.close(); }
 			}
-			
-			public void stopRunning() {
-				flag = false;
-			}
 		};
+		
+		thread.start();
 	}
 	
-	public void setData(boolean data, int pos) {
-		this.processesData[pos] = data;
+	public void setData(JSONArray info) {
+		
+		Integer id = info.getInt(0);
+		info.remove(0);
+		this.processesData.put(id.toString(), info);
+	}
+	
+	public String getData() throws InterruptedException { // maybe unnecessary
+		
+//		Thread.sleep(1000);
+//		
+//		JSONArray hue = this.processD.getJSONArray("2");
+//		
+//		System.out.println(hue.get(0).toString());
+		
+//		System.out.println(hue.toString());
+		return this.processesData.toString();
+	}
+	
+	public void stopListen() {
+		this.flag = false;
+	}
+	
+	public void resetData() {
+		for (int i = 0; i < 5; i++) {
+//			this.processesData[i] = null;
+		}
 	}
 }
