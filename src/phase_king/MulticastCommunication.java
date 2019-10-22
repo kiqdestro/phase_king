@@ -10,6 +10,7 @@ public class MulticastCommunication {
 	int socket;
 	String groupAddress;
 	public JSONObject processesData = new JSONObject();
+	public boolean tiebraker;
 	
 	public boolean flag = true;
 	
@@ -18,21 +19,30 @@ public class MulticastCommunication {
 		this.groupAddress = group;
 	}
 	
-	public void talk(Integer pos, Boolean data, Integer valuePK) throws IOException, SocketException { // null if not in use
+	public void talk(Integer pos, Boolean data, Integer valuePK, Boolean maj) throws IOException, SocketException { // null if not in use
 		
 		JSONArray info = new JSONArray();
 		InetAddress group = InetAddress.getByName(this.groupAddress);
 		MulticastSocket s = new MulticastSocket(this.socket);
 		s.joinGroup(group);
 		
-		info.put(pos);
-		
-		if(data != null) {
-			info.put(1, data);
+		if(maj != null) {
+			info.put(0, "tiebraker");
+			info.put(1, maj);
 		}
 		
-		if(valuePK != null) {
-			info.put(2, valuePK);
+		else {
+			
+			info.put(0, "processInfo");
+			info.put(1, pos);
+			
+			if(data != null) {
+				info.put(2, data);
+			}
+			
+			if(valuePK != null) {
+				info.put(3, valuePK);
+			}
 		}
 		
 		String messageS = info.toString();
@@ -82,9 +92,16 @@ public class MulticastCommunication {
 	
 	public void setData(JSONArray info) {
 		
-		Integer id = info.getInt(0);
-		info.remove(0);
-		this.processesData.put(id.toString(), info);
+		if(info.getString(0).equals("processInfo")) {
+			Integer id = info.getInt(1);
+			info.remove(0);
+			info.remove(0);
+			this.processesData.put(id.toString(), info);
+		}
+		
+		else {
+			this.tiebraker = info.getBoolean(1);
+		}
 	}
 	
 	public String getData() throws InterruptedException { // maybe unnecessary

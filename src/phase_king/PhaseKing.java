@@ -26,7 +26,7 @@ public class PhaseKing {
 			
 			// round 1 -------------------------------------------------------------------------------------------
 			
-			comm.talk(process.id, process.data, process.valuePK);
+			comm.talk(process.id, process.data, process.valuePK, null);
 			
 			boolean verif = true;
 			String val;
@@ -43,8 +43,8 @@ public class PhaseKing {
 					
 					catch (JSONException e) {
 						verif = true;
-						Thread.sleep(500);
-						comm.talk(process.id, process.data, process.valuePK);
+						Thread.sleep(1000);
+						comm.talk(process.id, process.data, process.valuePK, null);
 						break;						
 					}
 				}
@@ -77,14 +77,32 @@ public class PhaseKing {
 			
 			// define who is the phase leader
 			
-			
+			int phaseKing = 0;
 			
 			for (Integer i = 0; i < 5; i++) {
-//				fdg
+				phaseKing = phaseKing + Integer.parseInt(comm.processesData.getJSONArray(i.toString()).get(1).toString());
 			}
 			
+			phaseKing = phaseKing % 5;
 			
+			if (process.id == phaseKing) {
+				
+				comm.talk(null, null, null, maj);
+				
+			}
 			
+			if (mult >= 3) {
+				process.data = maj;
+			}
+			
+			else {
+				process.data = comm.tiebraker;
+			}
+			
+			if(phase == 1) {
+				System.out.println("ID: " + process.id + ", value: " + process.data);
+				comm.stopListen();
+			}
 		}
 	}
 }
