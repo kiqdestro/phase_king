@@ -83,7 +83,14 @@ public class PhaseKing {
 				phaseKing = phaseKing + Integer.parseInt(comm.processesData.getJSONArray(i.toString()).get(1).toString());
 			}
 			
-			phaseKing = phaseKing % 5;
+			if (phase == 0) {
+				phaseKing = phaseKing % 5;
+			}
+			
+			else {
+				phaseKing = (phaseKing + 1) % 5;
+			}
+			
 			
 			if (process.id == phaseKing) {
 				
