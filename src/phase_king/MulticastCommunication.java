@@ -2,33 +2,45 @@ package phase_king;
 
 import java.io.*;
 import java.net.*;
+import java.security.*;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+
 import org.json.*;
 
 public class MulticastCommunication {
 	
-	int socket;
-	String groupAddress;
-	public JSONObject processesData = new JSONObject();
-	public boolean tiebraker;
+	int socket; // socket defined in PhaseKing.java
+	String groupAddress; // group address also defined in PhaseKing.java
+	public JSONObject processesData = new JSONObject(); // information of all the processes will be written here
+	public boolean tiebraker; // tiebreaker sent by the phase king
+	public Integer phaseKing; // phase king defined by PhaseKing.java
 	
-	public boolean flag = true;
+	public boolean flag = true; // flag that keeps the listen thread running
 	
-	MulticastCommunication(String group, int socket){
+	MulticastCommunication(String group, int socket){ // class constructor
 		this.socket = socket;
 		this.groupAddress = group;
 	}
 	
-	public void talk(Integer pos, Boolean data, Integer valuePK, Boolean maj) throws IOException, SocketException { // null if not in use
+	public void talk(Integer pos, Boolean data, Integer valuePK, PublicKey publicKey, byte[] maj) throws IOException, SocketException { // null if not in use
 		
 		JSONArray info = new JSONArray();
 		InetAddress group = InetAddress.getByName(this.groupAddress);
 		MulticastSocket s = new MulticastSocket(this.socket);
 		s.joinGroup(group);
 		
+		// if the process is sendind its information, the maj variable will be null. If the phase king is sending the tiebreaker, the other variables will be null
+		
 		if(maj != null) {
+			
 			info.put(0, "tiebraker");
-			info.put(1, maj);
+			info.put(1, Base64.getEncoder().encodeToString(maj));
 		}
 		
 		else {
@@ -43,11 +55,18 @@ public class MulticastCommunication {
 			if(valuePK != null) {
 				info.put(3, valuePK);
 			}
+			
+			if(publicKey != null) {
+				
+				info.put(4, Base64.getEncoder().encodeToString(publicKey.getEncoded()));
+				
+				
+			}
 		}
 		
-		String messageS = info.toString();
+		byte [] m = info.toString().getBytes(); ; // convert convert json object to string than to byte array
 		
-		byte [] m = messageS.getBytes();
+		// sending datagram packet
 	    
 		DatagramPacket messageOut = new DatagramPacket(m, m.length, group, this.socket);
 		s.send(messageOut);
@@ -56,7 +75,7 @@ public class MulticastCommunication {
 		
 	}
 	
-	public void listen() throws IOException, SocketException {
+	public void listen() throws IOException, SocketException { // method that contains the thread to capture packets
 		
 		String groupAddress = this.groupAddress;
 		int socket = this.socket;
@@ -76,13 +95,28 @@ public class MulticastCommunication {
 						byte[] buffer = new byte[1000];
 						DatagramPacket in = new DatagramPacket (buffer, buffer.length);
 						s.receive(in);
-						JSONArray info = new JSONArray(new String(in.getData()));
 						
-						setData(info);
+						setData(new JSONArray(new String(in.getData()))); // get the json array and send to setData method
 					}
 					
 				} catch (SocketException e){System.out.println("Socket: " + e.getMessage());
 				} catch (IOException e){System.out.println("IO: " + e.getMessage());
+				} catch (InvalidKeyException e) {
+					e.printStackTrace();
+				} catch (NoSuchAlgorithmException e) {
+					e.printStackTrace();
+				} catch (NoSuchPaddingException e) {
+					e.printStackTrace();
+				} catch (IllegalBlockSizeException e) {
+					e.printStackTrace();
+				} catch (BadPaddingException e) {
+					e.printStackTrace();
+				} catch (InvalidKeySpecException e) {
+					e.printStackTrace();
+				} catch (JSONException e) {
+					e.printStackTrace();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
 				} finally {if (s != null) s.close(); }
 			}
 		};
@@ -90,39 +124,48 @@ public class MulticastCommunication {
 		thread.start();
 	}
 	
-	public void setData(JSONArray info) {
+	public void setData(JSONArray info) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, IOException, InvalidKeySpecException, InterruptedException {
 		
-		if(info.getString(0).equals("processInfo")) {
-			Integer id = info.getInt(1);
-			info.remove(0);
-			info.remove(0);
-			this.processesData.put(id.toString(), info);
+		if(info.getString(0).equals("processInfo")) { // catching info
+			Integer id = info.getInt(1); // the id turns into a processesData index for this process
+			info.remove(0); // removing "processInfo" from info JSONArray
+			info.remove(0); // removing id from info JSONArray
+			this.processesData.put(id.toString(), info); // put the information in processesData array
 		}
 		
-		else {
-			this.tiebraker = info.getBoolean(1);
+		else if (info.getString(0).equals("tiebraker")){ // catching tiebraker
+			
+			
+			
+			byte[] output = Base64.getDecoder().decode(info.getString(1).getBytes()); // getting encrypted value as byte array
+			
+			while(this.phaseKing == null) { //prevent failure causing by unsyncing
+				Thread.sleep(100);
+			}
+
+			byte[] publicKeyData = Base64.getDecoder().decode(processesData.getJSONArray(this.phaseKing.toString()).get(2).toString()); // getting phase king's public key as byte array
+			X509EncodedKeySpec spec = new X509EncodedKeySpec(publicKeyData);
+			KeyFactory kf = KeyFactory.getInstance("RSA");
+			PublicKey phaseKingPK = kf.generatePublic(spec); // converting from byte array to PublicKey Object
+//			PublicKey phaseKingPK = PublicKey.class.cast(processesData.getJSONArray(this.phaseKing.toString()).get(2));
+//			System.out.println(phaseKingPK);
+			byte[] decryptedOutput = Cryptography.decryptData(output, phaseKingPK); // decrypting value
+			String textFormat = new String(decryptedOutput);
+			
+			if(!textFormat.equals("true") && !textFormat.equals("false")) {
+				System.out.println("The tie braker was not sent by the phase king");
+				System.exit(0);
+			}
+			
+			this.tiebraker = Boolean.valueOf(textFormat);
 		}
 	}
 	
-	public String getData() throws InterruptedException { // maybe unnecessary
-		
-//		Thread.sleep(1000);
-//		
-//		JSONArray hue = this.processD.getJSONArray("2");
-//		
-//		System.out.println(hue.get(0).toString());
-		
-//		System.out.println(hue.toString());
-		return this.processesData.toString();
-	}
-	
-	public void stopListen() {
+	public void stopListen() { // stop thread
 		this.flag = false;
 	}
 	
-	public void resetData() {
-		for (int i = 0; i < 5; i++) {
-//			this.processesData[i] = null;
-		}
+	public void setPK(int pk) { // set phase king
+		this.phaseKing = pk;
 	}
 }
