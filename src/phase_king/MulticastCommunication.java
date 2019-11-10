@@ -19,7 +19,7 @@ public class MulticastCommunication {
 	String groupAddress; // group address also defined in PhaseKing.java
 	public JSONObject processesData = new JSONObject(); // information of all the processes will be written here
 	public boolean tiebraker; // tiebreaker sent by the phase king
-	public Integer phaseKing; // phase king defined by PhaseKing.java
+	Integer phaseKing; // phase king defined by PhaseKing.java
 	
 	public boolean flag = true; // flag that keeps the listen thread running
 	
@@ -28,19 +28,19 @@ public class MulticastCommunication {
 		this.groupAddress = group;
 	}
 	
-	public void talk(Integer pos, Boolean data, Integer valuePK, PublicKey publicKey, byte[] maj) throws IOException, SocketException { // null if not in use
+	public void talk(Integer pos, Boolean data, Integer valuePK, Boolean maj) throws IOException, SocketException { // null if not in use
 		
 		JSONArray info = new JSONArray();
 		InetAddress group = InetAddress.getByName(this.groupAddress);
 		MulticastSocket s = new MulticastSocket(this.socket);
 		s.joinGroup(group);
 		
-		// if the process is sendind its information, the maj variable will be null. If the phase king is sending the tiebreaker, the other variables will be null
+		// if the process is sending its information, the maj variable will be null. If the phase king is sending the tiebreaker, the other variables will be null
 		
 		if(maj != null) {
 			
 			info.put(0, "tiebraker");
-			info.put(1, Base64.getEncoder().encodeToString(maj));
+			info.put(1, maj);
 		}
 		
 		else {
@@ -54,13 +54,6 @@ public class MulticastCommunication {
 			
 			if(valuePK != null) {
 				info.put(3, valuePK);
-			}
-			
-			if(publicKey != null) {
-				
-				info.put(4, Base64.getEncoder().encodeToString(publicKey.getEncoded()));
-				
-				
 			}
 		}
 		
@@ -135,37 +128,11 @@ public class MulticastCommunication {
 		
 		else if (info.getString(0).equals("tiebraker")){ // catching tiebraker
 			
-			
-			
-			byte[] output = Base64.getDecoder().decode(info.getString(1).getBytes()); // getting encrypted value as byte array
-			
-			while(this.phaseKing == null) { //prevent failure causing by unsyncing
-				Thread.sleep(100);
-			}
-
-			byte[] publicKeyData = Base64.getDecoder().decode(processesData.getJSONArray(this.phaseKing.toString()).get(2).toString()); // getting phase king's public key as byte array
-			X509EncodedKeySpec spec = new X509EncodedKeySpec(publicKeyData);
-			KeyFactory kf = KeyFactory.getInstance("RSA");
-			PublicKey phaseKingPK = kf.generatePublic(spec); // converting from byte array to PublicKey Object
-//			PublicKey phaseKingPK = PublicKey.class.cast(processesData.getJSONArray(this.phaseKing.toString()).get(2));
-//			System.out.println(phaseKingPK);
-			byte[] decryptedOutput = Cryptography.decryptData(output, phaseKingPK); // decrypting value
-			String textFormat = new String(decryptedOutput);
-			
-			if(!textFormat.equals("true") && !textFormat.equals("false")) {
-				System.out.println("The tie braker was not sent by the phase king");
-				System.exit(0);
-			}
-			
-			this.tiebraker = Boolean.valueOf(textFormat);
+			this.tiebraker = info.getBoolean(1);
 		}
 	}
 	
 	public void stopListen() { // stop thread
 		this.flag = false;
-	}
-	
-	public void setPK(int pk) { // set phase king
-		this.phaseKing = pk;
 	}
 }

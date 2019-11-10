@@ -28,7 +28,8 @@ public class PhaseKing {
 		
 		Process process = new Process(id); // create process
 		
-		System.out.println("valor inicial: " + process.data);
+		System.out.println("Initial value: " + process.data);
+		
 		MulticastCommunication comm = new MulticastCommunication("228.1.2.3", 6789); // create instance of the multicast communication class
 		
 		comm.listen(); // start the listen thread to communication
@@ -37,7 +38,7 @@ public class PhaseKing {
 			
 			// round 1 -------------------------------------------------------------------------------------------
 			
-			comm.talk(process.id, process.data, process.valuePK, process.getPublicKey(), null); // send process information for the first time
+			comm.talk(process.id, process.data, process.valuePK, null); // send process information for the first time
 			
 			boolean verif = true;
 			String val;
@@ -55,7 +56,7 @@ public class PhaseKing {
 					catch (JSONException e) {
 						verif = true;
 						Thread.sleep(1000);
-						comm.talk(process.id, process.data, process.valuePK, process.getPublicKey(), null); // send information again
+						comm.talk(process.id, process.data, process.valuePK, null); // send information again
 						break;						
 					}
 				}
@@ -114,14 +115,12 @@ public class PhaseKing {
 				comm.phaseKing = phaseKing;
 			}
 			
-			Thread.sleep(1000); // All the processes wait to avoid syncrony problems
+			Thread.sleep(1000); // All the processes wait to avoid synchrony problems
 			
 			
 			if (process.id == phaseKing) { // the phase king needs to send the tiebreaker to everyone				
 				
-				byte[] encrypted = Cryptography.encryptData(maj.toString(), process.getPrivateKey());
-				
-				comm.talk(null, null, null, null, encrypted);
+				comm.talk(null, null, null, maj);
 				
 			}
 			
@@ -137,5 +136,6 @@ public class PhaseKing {
 		
 		System.out.println("ID: " + process.id + ", value: " + process.data); // show the final value and process id
 		comm.stopListen(); // stop the listen thread
+		System.exit(0);
 	}
 }
