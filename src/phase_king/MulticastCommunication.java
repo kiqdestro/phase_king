@@ -18,7 +18,7 @@ public class MulticastCommunication {
 	int socket; // socket defined in PhaseKing.java
 	String groupAddress; // group address also defined in PhaseKing.java
 	public JSONObject processesData = new JSONObject(); // information of all the processes will be written here
-	public boolean tiebraker; // tiebreaker sent by the phase king
+	public Boolean tiebraker = null; // tiebreaker sent by the phase king
 	Integer phaseKing; // phase king defined by PhaseKing.java
 	
 	public boolean flag = true; // flag that keeps the listen thread running

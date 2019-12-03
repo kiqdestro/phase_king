@@ -57,7 +57,7 @@ public class PhaseKing {
 						verif = true;
 						Thread.sleep(1000);
 						comm.talk(process.id, process.data, process.valuePK, null); // send information again
-						break;						
+						break;
 					}
 				}
 			}
@@ -130,6 +130,9 @@ public class PhaseKing {
 			}
 			
 			else {
+				while(comm.tiebraker == null) {
+					Thread.sleep(200);
+				}
 				process.data = comm.tiebraker;
 			}
 		}
